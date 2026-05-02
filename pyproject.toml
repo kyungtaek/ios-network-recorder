@@ -1,0 +1,6 @@
+[project]
+name = "ios-network-recorder-harness"
+version = "0.1.0"
+description = "ios-network-recorder 멀티에이전트 개발 하네스"
+requires-python = ">=3.11"
+dependencies = []

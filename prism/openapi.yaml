@@ -1,0 +1,241 @@
+openapi: 3.0.3
+info:
+  title: ios-network-recorder Mock API
+  description: Prism mock server spec for ios-network-recorder E2E testing. Provides realistic endpoints that exercise 200/201/400/401/500 status codes with example payloads.
+  version: 0.1.0
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - email
+        - name
+      properties:
+        id:
+          type: string
+          example: "usr_001"
+        email:
+          type: string
+          format: email
+          example: "alice@example.com"
+        name:
+          type: string
+          example: "Alice Smith"
+      example:
+        id: "usr_001"
+        email: "alice@example.com"
+        name: "Alice Smith"
+
+    Item:
+      type: object
+      required:
+        - id
+        - name
+        - price
+      properties:
+        id:
+          type: string
+          example: "item_001"
+        name:
+          type: string
+          example: "Widget"
+        price:
+          type: number
+          format: float
+          example: 9.99
+      example:
+        id: "item_001"
+        name: "Widget"
+        price: 9.99
+
+    Order:
+      type: object
+      required:
+        - id
+        - userId
+        - total
+      properties:
+        id:
+          type: string
+          example: "ord_001"
+        userId:
+          type: string
+          example: "usr_001"
+        total:
+          type: number
+          format: float
+          example: 29.97
+      example:
+        id: "ord_001"
+        userId: "usr_001"
+        total: 29.97
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: integer
+          example: 400
+        message:
+          type: string
+          example: "An error occurred"
+
+    CreateItemRequest:
+      type: object
+      required:
+        - name
+        - price
+      properties:
+        name:
+          type: string
+          example: "Widget"
+        price:
+          type: number
+          format: float
+          example: 9.99
+
+paths:
+  /users/me:
+    get:
+      summary: Get authenticated user profile
+      description: "Returns the current user. Use `Prefer: code=401` header to force an unauthorized response."
+      operationId: getUsersMe
+      parameters:
+        - name: Authorization
+          in: header
+          required: false
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiJ9.test"
+      responses:
+        '200':
+          description: Authenticated user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: "usr_001"
+                email: "alice@example.com"
+                name: "Alice Smith"
+        '401':
+          description: Unauthorized — missing or invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 401
+                message: "Unauthorized: missing or invalid token"
+
+  /items:
+    get:
+      summary: List items
+      description: Returns a list of items, optionally filtered by search query and limited in count.
+      operationId: getItems
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Full-text search query
+          schema:
+            type: string
+            example: "widget"
+        - name: limit
+          in: query
+          required: false
+          description: Maximum number of items to return
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            example: 10
+      responses:
+        '200':
+          description: List of items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Item'
+              example:
+                - id: "item_001"
+                  name: "Widget"
+                  price: 9.99
+                - id: "item_002"
+                  name: "Gadget"
+                  price: 24.99
+                - id: "item_003"
+                  name: "Doohickey"
+                  price: 4.50
+
+    post:
+      summary: Create a new item
+      description: "Creates an item and returns the created resource with its assigned ID. Use `Prefer: code=400` to force a validation error response."
+      operationId: createItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateItemRequest'
+            example:
+              name: "Widget"
+              price: 9.99
+      responses:
+        '201':
+          description: Item created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+              example:
+                id: "item_042"
+                name: "Widget"
+                price: 9.99
+        '400':
+          description: Bad Request — invalid or missing fields
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 400
+                message: "Bad Request: 'name' is required and must be a non-empty string"
+
+  /orders:
+    get:
+      summary: List orders
+      description: "Returns a list of orders for the current user. Use `Prefer: code=500` to force a server error response."
+      operationId: getOrders
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+              example:
+                - id: "ord_001"
+                  userId: "usr_001"
+                  total: 29.97
+                - id: "ord_002"
+                  userId: "usr_001"
+                  total: 14.50
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: 500
+                message: "Internal Server Error: database connection failed"

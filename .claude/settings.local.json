@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcrun swift*)",
+      "Bash(xcodebuild*)",
+      "Bash(xcodegen*)",
+      "Bash(xcrun simctl*)",
+      "Bash(npx @stoplight/prism-cli*)",
+      "Bash(npx har-validator*)",
+      "Bash(curl http://127.0.0.1:4010*)",
+      "Bash(mkdir -p *)",
+      "Bash(touch *)",
+      "Bash(ls*)",
+      "Bash(cat *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(python3*)",
+      "Bash(git add *)",
+      "Bash(git commit*)",
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(brew install*)",
+      "Write",
+      "WebSearch",
+      "WebFetch(domain:developer.apple.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:w3.org)",
+      "WebFetch(domain:docs.hoverfly.io)"
+    ]
+  }
+}

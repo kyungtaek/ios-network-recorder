@@ -1,0 +1,31 @@
+# Xcode
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+DerivedData/
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Swift PM
+.build/
+.swiftpm/
+
+# OS
+.DS_Store
+**/.DS_Store
+
+# Harness runtime artifacts
+runs/*/
+!runs/.gitkeep
+
+# E2E test artifacts
+exported.har
+/tmp/*.har
+
+# Python
+__pycache__/
+*.pyc
+.venv/

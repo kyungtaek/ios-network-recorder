@@ -1,0 +1,67 @@
+name: SampleApp
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  NetworkRecorder:
+    path: ../sdk
+
+targets:
+  SampleApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: SampleApp
+    dependencies:
+      - package: NetworkRecorder
+        product: NetworkRecorder
+    info:
+      path: SampleApp/Info.plist
+      properties:
+        CFBundleDisplayName: SampleApp
+        UILaunchScreen: {}
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.SampleApp
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  SampleAppUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: SampleApp/Networking
+      - path: SampleAppUITests
+    dependencies:
+      - package: NetworkRecorder
+        product: NetworkRecorder
+      - target: SampleApp
+    info:
+      path: SampleAppUITests/Info.plist
+      properties:
+        CFBundleName: SampleAppUITests
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.SampleAppUITests
+        TEST_TARGET_NAME: SampleApp
+
+schemes:
+  SampleApp:
+    build:
+      targets:
+        SampleApp: all
+        SampleAppUITests: [test]
+    test:
+      targets:
+        - SampleAppUITests
+    run:
+      config: Debug
