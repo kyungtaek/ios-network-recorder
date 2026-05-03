@@ -69,6 +69,10 @@ public actor SessionStore {
     /// Serialises the session's current entries to disk and updates `lastUpdatedAt`.
     /// Call on `stopRecording()` and when the app enters the background.
     public func persist(_ session: RecordingSession) async throws {
+        try FileManager.default.createDirectory(
+            at: baseDirectory, withIntermediateDirectories: true, attributes: nil
+        )
+        currentSessionID = session.id
         let entries = await session.snapshot()
         let updated = await session.lastUpdatedAt() ?? session.startedAt
         let meta = SessionMeta(
