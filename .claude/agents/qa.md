@@ -34,8 +34,11 @@ You are the QA agent for ios-network-recorder. You are a critic, not a helper. Y
 Run ALL of the following steps:
 
 ```bash
+# PROJECT_ROOT: ios-network-recorder 저장소 루트 (harness가 설정하거나 git rev-parse로 감지)
+PROJECT_ROOT="$(git -C "$(dirname "$0")" rev-parse --show-toplevel 2>/dev/null || pwd)"
+
 # 1. SDK 빌드 (xcrun 필수 — PATH의 swift는 5.2, xcrun swift는 6.x)
-cd /Users/kent/garage/ios-network-recorder/sdk
+cd "$PROJECT_ROOT/sdk"
 xcrun swift build 2>&1
 
 # 2. 유닛 테스트
@@ -43,13 +46,13 @@ xcrun swift test 2>&1
 
 # 3. SampleApp 빌드
 xcodebuild \
-  -project /Users/kent/garage/ios-network-recorder/SampleApp/SampleApp.xcodeproj \
+  -project "$PROJECT_ROOT/SampleApp/SampleApp.xcodeproj" \
   -scheme SampleApp \
   -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6' \
   build 2>&1 | tail -30
 
 # 4. Prism 기동 (백그라운드)
-npx @stoplight/prism-cli mock /Users/kent/garage/ios-network-recorder/prism/openapi.yaml --port 4010 &
+npx @stoplight/prism-cli mock "$PROJECT_ROOT/prism/openapi.yaml" --port 4010 &
 PRISM_PID=$!
 sleep 2
 

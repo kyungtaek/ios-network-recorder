@@ -2,7 +2,7 @@ name: SampleApp
 options:
   bundleIdPrefix: com.example
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
   xcodeVersion: "16.0"
   createIntermediateGroups: true
 
@@ -14,7 +14,7 @@ targets:
   SampleApp:
     type: application
     platform: iOS
-    deploymentTarget: "16.0"
+    deploymentTarget: "17.0"
     sources:
       - path: SampleApp
     dependencies:
@@ -29,14 +29,14 @@ targets:
           NSAllowsLocalNetworking: true
     settings:
       base:
-        SWIFT_VERSION: "5.9"
+        SWIFT_VERSION: "6.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.example.SampleApp
         TARGETED_DEVICE_FAMILY: "1,2"
 
   SampleAppUITests:
     type: bundle.ui-testing
     platform: iOS
-    deploymentTarget: "16.0"
+    deploymentTarget: "17.0"
     sources:
       - path: SampleApp/Networking
       - path: SampleAppUITests
@@ -50,7 +50,7 @@ targets:
         CFBundleName: SampleAppUITests
     settings:
       base:
-        SWIFT_VERSION: "5.9"
+        SWIFT_VERSION: "6.0"
         PRODUCT_BUNDLE_IDENTIFIER: com.example.SampleAppUITests
         TEST_TARGET_NAME: SampleApp
 

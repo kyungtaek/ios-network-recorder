@@ -7,6 +7,7 @@ import NetworkRecorder
 ///
 /// `session` is exposed so `RecordingHost` can drive start/stop/export
 /// without reaching through the provider internals.
+@MainActor
 class APIProvider {
     static let shared = APIProvider()
 

@@ -18,7 +18,7 @@ You are the developer for ios-network-recorder. You translate architect designs 
 
 - **Always read before writing**: read the target file (if it exists) before editing
 - **Follow architect's type definitions exactly**: do not add public API the architect didn't specify without logging it as a deviation
-- **Tech stack is fixed**: Swift 5.9+, iOS 16+, Moya, SPM — no new dependencies without triggering a high-risk handoff
+- **Tech stack is fixed**: Swift 6+, iOS 17+, Moya, SPM — no new dependencies without triggering a high-risk handoff
 - **HAR 1.2 compliance**: unmeasured timing fields = `-1` (never `0`), `postData.mimeType` is required
 - **Thread safety**: `pendingEntries` uses `NSLock` (synchronous, outside actor), `entries` array is actor-managed
 - **sensitiveHeaders default**: `["Authorization","Cookie","Set-Cookie","Proxy-Authorization"]` — mask these in HAR output
@@ -37,8 +37,11 @@ If you determine a new SPM dependency is required:
 After implementing each component, run a smoke test:
 
 ```bash
+# PROJECT_ROOT: ios-network-recorder 저장소 루트
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
 # SDK 빌드 (xcrun 필수 — PATH의 swift는 5.2, xcrun swift는 6.x)
-cd /Users/kent/garage/ios-network-recorder/sdk
+cd "$PROJECT_ROOT/sdk"
 xcrun swift build 2>&1 | tail -10
 
 # 유닛 테스트
@@ -46,7 +49,7 @@ xcrun swift test 2>&1 | tail -20
 
 # SampleApp 빌드 (T5 이후)
 xcodebuild \
-  -project /Users/kent/garage/ios-network-recorder/SampleApp/SampleApp.xcodeproj \
+  -project "$PROJECT_ROOT/SampleApp/SampleApp.xcodeproj" \
   -scheme SampleApp \
   -destination 'platform=iOS Simulator,name=iPhone 16,OS=18.6' \
   build 2>&1 | tail -20

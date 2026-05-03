@@ -299,6 +299,34 @@ final class MoyaRecorderPluginTests: XCTestCase {
         XCTAssertNotNil(entry.comment)
     }
 
+
+    func test_didReceive_statusCode401_writesEntry() async throws {
+        let session = RecordingSession()
+        let clock = MockClock(date: Date(timeIntervalSinceReferenceDate: 0))
+        let plugin = makePlugin(session: session, clock: clock)
+
+        await session.startRecording()
+
+        let request = URLRequest(url: URL(string: "https://api.example.com/secure")!)
+        let prepared = plugin.prepare(request, target: MockTarget())
+        plugin.willSend(MockRequest(urlRequest: prepared), target: MockTarget())
+
+        clock.nowDate = Date(timeIntervalSinceReferenceDate: 0.15)
+
+        let bodyData = Data("{\"error\":\"unauthorized\"}".utf8)
+        let moyaResponse = makeResponse(statusCode: 401, data: bodyData, urlRequest: prepared)
+        let error = MoyaError.statusCode(moyaResponse)
+        plugin.didReceive(.failure(error), target: MockTarget())
+
+        try await _Concurrency.Task.sleep(nanoseconds: 50_000_000)
+
+        let entries = await session.snapshot()
+        XCTAssertEqual(entries.count, 1)
+        let entry = entries[0]
+        XCTAssertEqual(entry.response.status, 401)
+        XCTAssertNotNil(entry.comment)
+    }
+
     // MARK: - Timing rules
 
     func test_didReceive_timingsObeyHARRules() async throws {

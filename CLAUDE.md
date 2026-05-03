@@ -34,7 +34,7 @@ ios-network-recorder/
 
 ## 기술 스택
 
-- Swift 5.9+, iOS 16+
+- Swift 6+, iOS 17+
 - Moya (네트워크 추상화)
 - Swift Package Manager (SDK 패키징)
 - XcodeGen (SampleApp 프로젝트 생성)

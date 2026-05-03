@@ -4,10 +4,11 @@
 import Foundation
 import NetworkRecorder
 
-/// Singleton actor that starts/stops recording and exports the captured HAR file.
+/// Singleton that starts/stops recording and exports the captured HAR file.
 ///
-/// The actor wraps `APIProvider.shared.session` so callers never manipulate the session directly.
-actor RecordingHost {
+/// The host wraps `APIProvider.shared.session` so callers never manipulate the session directly.
+@MainActor
+final class RecordingHost {
     static let shared = RecordingHost()
 
     private let session: RecordingSession
