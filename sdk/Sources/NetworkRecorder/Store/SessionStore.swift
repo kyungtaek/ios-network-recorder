@@ -128,6 +128,20 @@ public actor SessionStore {
         try FileManager.default.removeItem(at: fileURL(id: id))
     }
 
+    /// Permanently removes all session files from disk.
+    public func deleteAllSessions() throws {
+        guard FileManager.default.fileExists(atPath: baseDirectory.path) else { return }
+        try sessionURLs().forEach { try FileManager.default.removeItem(at: $0) }
+        currentSessionID = nil
+    }
+
+    /// Loads all HAR entries for the given session from disk.
+    public func loadEntries(id: String) throws -> [HAREntry] {
+        let data = try Data(contentsOf: fileURL(id: id))
+        let persisted = try Self.decoder.decode(PersistedSession.self, from: data)
+        return persisted.entries
+    }
+
     // MARK: - Private
 
     private func purgeExpiredSessions() {
