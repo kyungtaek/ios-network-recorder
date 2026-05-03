@@ -9,4 +9,9 @@ enum HARDateFormatter {
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
+
+    /// ISO 8601 string with colons replaced by dashes — safe for use in POSIX filenames.
+    static func filenameSafe(_ date: Date) -> String {
+        iso8601.string(from: date).replacingOccurrences(of: ":", with: "-")
+    }
 }

@@ -9,18 +9,30 @@ import Foundation
 public actor RecordingSession {
     private var entries: [HAREntry] = []
     private var _state: RecordingState = .idle
+    private var _lastUpdatedAt: Date?
     private let creator: HARCreator
+
+    /// Unique identifier for this session. Stable across persist/reload.
+    public nonisolated let id: String
+    /// Timestamp when this session was created (typically app launch time).
+    public nonisolated let startedAt: Date
 
     /// Synchronous, NSLock-protected store for in-flight request correlations.
     /// `nonisolated` so plugin callbacks can access it without crossing the actor boundary.
     nonisolated let pending = PendingStore()
 
     public init(
+        id: String = UUID().uuidString,
         creatorName: String = "ios-network-recorder",
         creatorVersion: String = "0.1.0"
     ) {
+        self.id = id
+        self.startedAt = Date()
         self.creator = HARCreator(name: creatorName, version: creatorVersion)
     }
+
+    /// Time of the last appended entry, or nil if no entries have been recorded yet.
+    public func lastUpdatedAt() -> Date? { _lastUpdatedAt }
 
     // MARK: - State transitions
 
@@ -63,6 +75,7 @@ public actor RecordingSession {
     /// Defense-in-depth against entries arriving after a pause/stop.
     public func append(_ entry: HAREntry) {
         guard _state == .recording else { return }
+        _lastUpdatedAt = Date()
         entries.append(entry)
     }
 

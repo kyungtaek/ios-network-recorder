@@ -48,9 +48,7 @@ public struct HARExporter {
         let data = try encoder.encode(doc)
 
         let dir = directory ?? fileManager.temporaryDirectory
-        let stamp = HARDateFormatter.iso8601.string(from: Date())
-            .replacingOccurrences(of: ":", with: "-")  // safe for POSIX filenames
-        let url = dir.appendingPathComponent("session-\(stamp).har")
+        let url = dir.appendingPathComponent("session-\(HARDateFormatter.filenameSafe(Date())).har")
         try data.write(to: url, options: .atomic)
         return url
     }
