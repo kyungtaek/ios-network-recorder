@@ -124,7 +124,10 @@ final class SessionDetailViewController: UIViewController {
             action: #selector(shareSession)
         )
 
-        let host = UIHostingController(rootView: SessionDetailView(item: item, store: store))
+        let detailView = SessionDetailView(item: item, store: store) { [weak self] entry in
+            self?.pushEntryDetail(for: entry)
+        }
+        let host = UIHostingController(rootView: detailView)
         addChild(host)
         host.view.frame = view.bounds
         host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
@@ -145,6 +148,38 @@ final class SessionDetailViewController: UIViewController {
                 present(alert, animated: true)
             }
         }
+    }
+
+    private func pushEntryDetail(for entry: HAREntry) {
+        let vc = EntryDetailViewController(entry: entry)
+        navigationController?.pushViewController(vc, animated: true)
+    }
+}
+
+// MARK: - EntryDetailViewController
+
+@MainActor
+final class EntryDetailViewController: UIViewController {
+    private let entry: HAREntry
+
+    init(entry: HAREntry) {
+        self.entry = entry
+        super.init(nibName: nil, bundle: nil)
+        let comps = URLComponents(string: entry.request.url)
+        title = comps?.path.isEmpty == false ? comps!.path : entry.request.url
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) not supported") }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        let host = UIHostingController(rootView: EntryDetailView(entry: entry))
+        addChild(host)
+        host.view.frame = view.bounds
+        host.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        view.addSubview(host.view)
+        host.didMove(toParent: self)
     }
 }
 
@@ -274,6 +309,7 @@ private struct SessionListView: View {
 private struct SessionDetailView: View {
     let item: SessionListItem
     let store: SessionStore
+    let onSelectEntry: (HAREntry) -> Void
 
     @State private var entries: [HAREntry] = []
     @State private var isLoading = false
@@ -306,7 +342,12 @@ private struct SessionDetailView: View {
                     if !entries.isEmpty {
                         Section("Requests (\(entries.count))") {
                             ForEach(entries.indices, id: \.self) { i in
-                                EntryRowView(entry: entries[i])
+                                Button {
+                                    onSelectEntry(entries[i])
+                                } label: {
+                                    EntryRowView(entry: entries[i])
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -336,11 +377,213 @@ private struct SessionDetailView: View {
     }
 }
 
+// MARK: - EntryDetailView
+
+@MainActor
+private struct EntryDetailView: View {
+    let entry: HAREntry
+
+    private var urlComponents: URLComponents? {
+        URLComponents(string: entry.request.url)
+    }
+
+    var body: some View {
+        List {
+            overviewSection
+            urlSection
+            if !entry.request.queryString.isEmpty { querySection }
+            requestHeadersSection
+            if entry.request.postData != nil { requestBodySection }
+            responseHeadersSection
+            responseBodySection
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    // MARK: Sections
+
+    private var overviewSection: some View {
+        Section("Overview") {
+            HStack(spacing: 10) {
+                Text(entry.request.method)
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 5))
+
+                Spacer()
+
+                let status = entry.response.status
+                Text(status == 0 ? "ERR" : "\(status)")
+                    .font(.caption.monospacedDigit().bold())
+                    .foregroundStyle(statusColor)
+                + Text("  \(entry.response.statusText)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            LabeledContent("Duration") {
+                Text(String(format: "%.0f ms", entry.time))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private var urlSection: some View {
+        Section("URL") {
+            if let comps = urlComponents {
+                LabeledContent("Host") {
+                    Text(comps.host ?? "—")
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                LabeledContent("Path") {
+                    Text(comps.path.isEmpty ? "/" : comps.path)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                if let scheme = comps.scheme {
+                    LabeledContent("Scheme") {
+                        Text(scheme)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            LabeledContent("Full URL") {
+                Text(entry.request.url)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .lineLimit(3)
+            }
+        }
+    }
+
+    private var querySection: some View {
+        Section("Query Parameters") {
+            ForEach(Array(entry.request.queryString.enumerated()), id: \.offset) { _, param in
+                LabeledContent(param.name) {
+                    Text(param.value)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .lineLimit(2)
+                }
+            }
+        }
+    }
+
+    private var requestHeadersSection: some View {
+        Section("Request Headers (\(entry.request.headers.count))") {
+            if entry.request.headers.isEmpty {
+                Text("(없음)").foregroundStyle(.tertiary)
+            } else {
+                ForEach(Array(entry.request.headers.enumerated()), id: \.offset) { _, h in
+                    HeaderRowView(name: h.name, value: h.value)
+                }
+            }
+        }
+    }
+
+    private var requestBodySection: some View {
+        Section("Request Body") {
+            if let postData = entry.request.postData {
+                LabeledContent("MIME Type", value: postData.mimeType)
+                if let params = postData.params, !params.isEmpty {
+                    ForEach(Array(params.enumerated()), id: \.offset) { _, p in
+                        LabeledContent(p.name) {
+                            Text(p.value ?? "—").foregroundStyle(.secondary)
+                        }
+                    }
+                } else if let text = postData.text {
+                    Text(text)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    private var responseHeadersSection: some View {
+        Section("Response Headers (\(entry.response.headers.count))") {
+            if entry.response.headers.isEmpty {
+                Text("(없음)").foregroundStyle(.tertiary)
+            } else {
+                ForEach(Array(entry.response.headers.enumerated()), id: \.offset) { _, h in
+                    HeaderRowView(name: h.name, value: h.value)
+                }
+            }
+        }
+    }
+
+    private var responseBodySection: some View {
+        Section("Response Body") {
+            LabeledContent("MIME Type", value: entry.response.content.mimeType)
+            if let text = entry.response.content.text {
+                if entry.response.content.encoding == "base64" {
+                    Label("Binary data (base64)", systemImage: "doc.binary")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                } else {
+                    Text(text)
+                        .font(.caption.monospaced())
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else {
+                Text("(empty)").foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    private var statusColor: Color {
+        switch entry.response.status {
+        case 200..<300: .green
+        case 300..<400: .orange
+        case 400..<600: .red
+        default: .secondary
+        }
+    }
+}
+
+// MARK: - HeaderRowView
+
+@MainActor
+private struct HeaderRowView: View {
+    let name: String
+    let value: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(name)
+                .font(.caption.bold())
+                .foregroundStyle(.primary)
+            Text(value)
+                .font(.caption.monospaced())
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .lineLimit(3)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
 // MARK: - EntryRowView
 
 @MainActor
 private struct EntryRowView: View {
     let entry: HAREntry
+
+    private var urlComponents: URLComponents? {
+        URLComponents(string: entry.request.url)
+    }
+    private var displayHost: String {
+        urlComponents?.host ?? entry.request.url
+    }
+    private var displayPath: String {
+        let path = urlComponents?.path ?? ""
+        return path.isEmpty ? "/" : path
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -356,16 +599,26 @@ private struct EntryRowView: View {
                 HStack(spacing: 4) {
                     Text(entry.request.method)
                         .font(.caption.bold())
-                        .foregroundStyle(.secondary)
-                    Text(entry.request.url)
+                        .foregroundStyle(.accentColor)
+                    Text(displayPath)
                         .font(.caption)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
+                Text(displayHost)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
                 Text(String(format: "%.0f ms", entry.time))
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .imageScale(.small)
+                .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 2)
     }
