@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "proxyman": {
+      "command": "/Applications/Proxyman.app/Contents/MacOS/mcp-server"
+    }
+  }
+}
