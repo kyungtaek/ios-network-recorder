@@ -335,4 +335,113 @@ final class MoyaRecorderPluginTests: XCTestCase {
         // time == send + wait + receive
         XCTAssertEqual(entries[0].time, timings.send + timings.wait + timings.receive)
     }
+
+    // MARK: - noMasking option
+
+    func test_noMasking_exposesAuthorizationHeader() async throws {
+        let session = RecordingSession()
+        let clock = MockClock()
+        let plugin = MoyaRecorderPlugin(
+            session: session,
+            sensitiveHeaders: MoyaRecorderPlugin.noMasking,
+            clock: clock
+        )
+
+        await session.startRecording()
+        var req = URLRequest(url: URL(string: "https://api.example.com/users")!)
+        req.setValue("Bearer secret-token-123", forHTTPHeaderField: "Authorization")
+
+        let prepared = runPrepareAndWillSend(plugin: plugin, request: req)
+        let response = makeResponse(statusCode: 200, urlRequest: prepared)
+        clock.nowDate = clock.nowDate.addingTimeInterval(0.1)
+        plugin.didReceive(.success(response), target: MockTarget())
+
+        try await _Concurrency.Task.sleep(nanoseconds: 50_000_000)
+        let entries = await session.snapshot()
+        let authHeader = entries[0].request.headers.first { $0.name.lowercased() == "authorization" }
+        XCTAssertEqual(authHeader?.value, "Bearer secret-token-123")
+    }
+
+    // MARK: - allowedDomains filter
+
+    func test_allowedDomains_recordsMatchingHost() async throws {
+        let session = RecordingSession()
+        let clock = MockClock()
+        let plugin = MoyaRecorderPlugin(
+            session: session,
+            allowedDomains: ["api.example.com"],
+            clock: clock
+        )
+
+        await session.startRecording()
+        var req = URLRequest(url: URL(string: "https://api.example.com/users")!)
+        let prepared = runPrepareAndWillSend(plugin: plugin, request: req)
+        let response = makeResponse(statusCode: 200, urlRequest: prepared)
+        clock.nowDate = clock.nowDate.addingTimeInterval(0.1)
+        plugin.didReceive(.success(response), target: MockTarget())
+
+        // Request to a different domain — should be silently skipped.
+        req = URLRequest(url: URL(string: "https://analytics.other.com/event")!)
+        let prepared2 = plugin.prepare(req, target: MockTarget())
+        plugin.willSend(MockRequest(urlRequest: prepared2), target: MockTarget())
+
+        try await _Concurrency.Task.sleep(nanoseconds: 50_000_000)
+        let entries = await session.snapshot()
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertTrue(entries[0].request.url.contains("api.example.com"))
+    }
+
+    func test_allowedDomains_subdomainMatch() async throws {
+        let session = RecordingSession()
+        let clock = MockClock()
+        // Specifying "example.com" should also match "api.example.com".
+        let plugin = MoyaRecorderPlugin(
+            session: session,
+            allowedDomains: ["example.com"],
+            clock: clock
+        )
+
+        await session.startRecording()
+        let req = URLRequest(url: URL(string: "https://api.example.com/users")!)
+        let prepared = runPrepareAndWillSend(plugin: plugin, request: req)
+        let response = makeResponse(statusCode: 200, urlRequest: prepared)
+        clock.nowDate = clock.nowDate.addingTimeInterval(0.1)
+        plugin.didReceive(.success(response), target: MockTarget())
+
+        try await _Concurrency.Task.sleep(nanoseconds: 50_000_000)
+        let entries = await session.snapshot()
+        XCTAssertEqual(entries.count, 1)
+    }
+
+    // MARK: - excludedQueryParams
+
+    func test_excludedQueryParams_stripsFromQueryStringAndURL() async throws {
+        let session = RecordingSession()
+        let clock = MockClock()
+        let plugin = MoyaRecorderPlugin(
+            session: session,
+            excludedQueryParams: ["md", "sig"],
+            clock: clock
+        )
+
+        await session.startRecording()
+        let req = URLRequest(url: URL(string: "https://api.example.com/items?q=test&limit=10&md=abc123&sig=xyz")!)
+        let prepared = runPrepareAndWillSend(plugin: plugin, request: req)
+        let response = makeResponse(statusCode: 200, urlRequest: prepared)
+        clock.nowDate = clock.nowDate.addingTimeInterval(0.1)
+        plugin.didReceive(.success(response), target: MockTarget())
+
+        try await _Concurrency.Task.sleep(nanoseconds: 50_000_000)
+        let entries = await session.snapshot()
+        XCTAssertEqual(entries.count, 1)
+
+        let entry = entries[0]
+        let paramNames = entry.request.queryString.map(\.name)
+        XCTAssertTrue(paramNames.contains("q"))
+        XCTAssertTrue(paramNames.contains("limit"))
+        XCTAssertFalse(paramNames.contains("md"), "md should be excluded")
+        XCTAssertFalse(paramNames.contains("sig"), "sig should be excluded")
+        XCTAssertFalse(entry.request.url.contains("md="), "md should be stripped from URL")
+        XCTAssertFalse(entry.request.url.contains("sig="), "sig should be stripped from URL")
+    }
 }

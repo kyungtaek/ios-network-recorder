@@ -14,18 +14,30 @@ enum HARRequestBuilder {
     static func build(
         from urlRequest: URLRequest,
         moyaTarget: TargetType,
-        sensitiveHeaders: Set<String>
+        sensitiveHeaders: Set<String>,
+        excludedQueryParams: Set<String> = []
     ) -> BuildResult {
         let method = urlRequest.httpMethod ?? "GET"
-        let urlString = urlRequest.url?.absoluteString ?? ""
 
-        // Parse query string from the URL.
-        let comps = urlRequest.url.flatMap {
+        // Parse query string from the URL, filtering excluded params from both the
+        // queryString array and the URL string stored in the HAR entry.
+        var comps = urlRequest.url.flatMap {
             URLComponents(url: $0, resolvingAgainstBaseURL: false)
         }
-        let qs: [HARNameValue] = comps?.queryItems?.map {
-            HARNameValue(name: $0.name, value: $0.value ?? "")
-        } ?? []
+        let qs: [HARNameValue]
+        if excludedQueryParams.isEmpty {
+            qs = comps?.queryItems?.map {
+                HARNameValue(name: $0.name, value: $0.value ?? "")
+            } ?? []
+        } else {
+            let filtered = comps?.queryItems?.filter {
+                !excludedQueryParams.contains($0.name)
+            } ?? []
+            qs = filtered.map { HARNameValue(name: $0.name, value: $0.value ?? "") }
+            // Strip excluded params from the URL string too for a consistent HAR entry.
+            comps?.queryItems = filtered.isEmpty ? nil : filtered
+        }
+        let urlString = comps?.url?.absoluteString ?? urlRequest.url?.absoluteString ?? ""
 
         // Collect and redact headers.
         let rawHeaders: [(String, String)] = (urlRequest.allHTTPHeaderFields ?? [:])

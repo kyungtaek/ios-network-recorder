@@ -10,14 +10,17 @@ import Moya
 /// The plugin injects a correlation header (`X-NR-Request-ID`) at `prepare` time and removes
 /// it from the captured HAR so it does not leak into recordings.
 ///
-/// Sensitive headers (Authorization, Cookie, etc.) are masked with `[REDACTED]`.
+/// Sensitive headers (Authorization, Cookie, etc.) are masked with `[REDACTED]` by default.
+/// Pass `sensitiveHeaders: MoyaRecorderPlugin.noMasking` to record auth tokens in plaintext
+/// (e.g., when the HAR will be used to replay authenticated requests).
+///
+/// Use `allowedDomains` to record only traffic to specific hosts.
+/// Use `excludedQueryParams` to strip dynamic params (e.g. HMAC signatures) from HAR entries.
 public final class MoyaRecorderPlugin: PluginType {
     /// Name of the internal correlation header injected into every request.
     public static let correlationHeader = "X-NR-Request-ID"
 
     /// Default set of header names whose values are replaced with `[REDACTED]` in HAR output.
-    /// Deviation from design (where it lived on `HARRedactor`): moved here so the value
-    /// is accessible as a public API default argument. `HARRedactor` remains internal.
     public static let defaultSensitiveHeaders: Set<String> = [
         "Authorization",
         "Cookie",
@@ -25,17 +28,31 @@ public final class MoyaRecorderPlugin: PluginType {
         "Proxy-Authorization"
     ]
 
+    /// Pass as `sensitiveHeaders` to record all headers in plaintext — including auth tokens.
+    /// Use with caution: HAR files shared via AirDrop or Jira will contain credentials.
+    public static let noMasking: Set<String> = []
+
     private let session: RecordingSession
     private let sensitiveHeaders: Set<String>
+    /// Only record requests whose host matches one of these domains (subdomain-aware).
+    /// Empty set = record all traffic (default).
+    private let allowedDomains: Set<String>
+    /// Query parameter names stripped from both the URL string and `queryString` array in HAR.
+    /// Use for dynamic values (HMAC signatures, nonces, timestamps) that differ per request.
+    private let excludedQueryParams: Set<String>
     private let clock: any RecorderClock
 
     public init(
         session: RecordingSession,
         sensitiveHeaders: Set<String> = MoyaRecorderPlugin.defaultSensitiveHeaders,
+        allowedDomains: Set<String> = [],
+        excludedQueryParams: Set<String> = [],
         clock: any RecorderClock = SystemClock()
     ) {
         self.session = session
         self.sensitiveHeaders = sensitiveHeaders
+        self.allowedDomains = allowedDomains
+        self.excludedQueryParams = excludedQueryParams
         self.clock = clock
     }
 
@@ -55,13 +72,15 @@ public final class MoyaRecorderPlugin: PluginType {
     /// Runs synchronously on the Moya callback thread — must not await.
     public func willSend(_ request: RequestType, target: TargetType) {
         guard let urlRequest = request.request,
-              let reqID = urlRequest.value(forHTTPHeaderField: Self.correlationHeader)
+              let reqID = urlRequest.value(forHTTPHeaderField: Self.correlationHeader),
+              shouldRecord(url: urlRequest.url)
         else { return }
 
         let built = HARRequestBuilder.build(
             from: urlRequest,
             moyaTarget: target,
-            sensitiveHeaders: sensitiveHeaders
+            sensitiveHeaders: sensitiveHeaders,
+            excludedQueryParams: excludedQueryParams
         )
 
         let pendingEntry = PendingEntry(
@@ -148,6 +167,16 @@ public final class MoyaRecorderPlugin: PluginType {
     }
 
     // MARK: - Private helpers
+
+    /// Returns true if the request URL should be recorded based on `allowedDomains`.
+    /// Matches exact host or any subdomain: specifying "example.com" also matches "api.example.com".
+    private func shouldRecord(url: URL?) -> Bool {
+        guard !allowedDomains.isEmpty else { return true }
+        guard let host = url?.host else { return false }
+        return allowedDomains.contains { domain in
+            host == domain || host.hasSuffix(".\(domain)")
+        }
+    }
 
     private static func extractRequestID(
         from result: Result<Response, MoyaError>
