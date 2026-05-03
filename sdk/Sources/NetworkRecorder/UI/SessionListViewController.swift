@@ -599,7 +599,7 @@ private struct EntryRowView: View {
                 HStack(spacing: 4) {
                     Text(entry.request.method)
                         .font(.caption.bold())
-                        .foregroundStyle(.accentColor)
+                        .foregroundStyle(Color.accentColor)
                     Text(displayPath)
                         .font(.caption)
                         .lineLimit(1)
