@@ -2,7 +2,7 @@
 // Tests drive the plugin directly without spinning a real MoyaProvider.
 
 import XCTest
-import Moya
+@preconcurrency import Moya
 @testable import NetworkRecorder
 
 // MARK: - Test doubles

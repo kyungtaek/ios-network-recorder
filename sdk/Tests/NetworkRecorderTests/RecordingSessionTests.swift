@@ -137,35 +137,34 @@ final class RecordingSessionTests: XCTestCase {
 
     // MARK: - PendingStore thread safety
 
-    func test_pendingStore_insertAndPop_threadSafe() {
+    func test_pendingStore_insertAndPop_threadSafe() async {
         let store = PendingStore()
         let iterations = 200
-        let expectation = self.expectation(description: "concurrent ops complete")
-        expectation.expectedFulfillmentCount = iterations
 
-        DispatchQueue.concurrentPerform(iterations: iterations) { i in
-            let requestID = "req-\(i)"
-            let entry = PendingEntry(
-                requestID: requestID,
-                startTime: Date(),
-                harRequest: HARRequest(
-                    method: "GET",
-                    url: "https://example.com/\(i)",
-                    headers: [],
-                    queryString: [],
-                    bodySize: -1
-                ),
-                httpVersion: "HTTP/1.1",
-                bodyByteCount: 0
-            )
-            store.insert(entry)
-            let popped = store.pop(requestID)
-            XCTAssertNotNil(popped)
-            XCTAssertEqual(popped?.requestID, requestID)
-            expectation.fulfill()
+        await withTaskGroup(of: Void.self) { group in
+            for i in 0..<iterations {
+                group.addTask {
+                    let requestID = "req-\(i)"
+                    let entry = PendingEntry(
+                        requestID: requestID,
+                        startTime: Date(),
+                        harRequest: HARRequest(
+                            method: "GET",
+                            url: "https://example.com/\(i)",
+                            headers: [],
+                            queryString: [],
+                            bodySize: -1
+                        ),
+                        httpVersion: "HTTP/1.1",
+                        bodyByteCount: 0
+                    )
+                    store.insert(entry)
+                    let popped = store.pop(requestID)
+                    XCTAssertNotNil(popped)
+                    XCTAssertEqual(popped?.requestID, requestID)
+                }
+            }
         }
-
-        waitForExpectations(timeout: 5)
         XCTAssertEqual(store.count, 0)
     }
 

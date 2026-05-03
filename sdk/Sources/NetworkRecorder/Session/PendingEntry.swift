@@ -5,7 +5,7 @@ import Foundation
 
 /// Captured state for an in-flight request. Lives in `PendingStore` until
 /// the corresponding response arrives in `didReceive`.
-struct PendingEntry {
+struct PendingEntry: Sendable {
     /// Correlation ID injected as X-NR-Request-ID.
     let requestID: String
     /// Wall-clock time when willSend fired; used to compute elapsed ms.

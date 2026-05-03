@@ -4,7 +4,7 @@ import Foundation
 
 /// HAR 1.2 timings object. Unmeasured fields use -1 as the sentinel value.
 /// send + wait + receive == HAREntry.time (invariant upheld at construction site).
-public struct HARTimings: Codable, Equatable {
+public struct HARTimings: Codable, Equatable, Sendable {
     /// Time spent in a queue waiting for a network connection (-1 = not measured).
     public var blocked: Double
     /// DNS resolution time (-1 = not measured).

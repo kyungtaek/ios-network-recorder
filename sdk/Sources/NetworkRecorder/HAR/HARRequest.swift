@@ -3,7 +3,7 @@
 import Foundation
 
 /// HAR 1.2 request object capturing all details of an outgoing HTTP request.
-public struct HARRequest: Codable, Equatable {
+public struct HARRequest: Codable, Equatable, Sendable {
     public var method: String
     public var url: String
     /// HTTP version string. Hard-coded "HTTP/1.1" for MVP.

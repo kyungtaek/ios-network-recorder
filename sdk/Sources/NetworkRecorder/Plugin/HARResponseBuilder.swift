@@ -2,7 +2,7 @@
 // Internal namespace.
 
 import Foundation
-import Moya
+@preconcurrency import Moya
 
 /// Internal builder that constructs `HARResponse` from a Moya `Response` or `MoyaError`.
 enum HARResponseBuilder {

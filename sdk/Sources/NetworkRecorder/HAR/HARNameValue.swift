@@ -3,7 +3,7 @@
 import Foundation
 
 /// A name/value pair used in headers, query strings, and cookies.
-public struct HARNameValue: Codable, Equatable {
+public struct HARNameValue: Codable, Equatable, Sendable {
     public var name: String
     public var value: String
     public var comment: String?

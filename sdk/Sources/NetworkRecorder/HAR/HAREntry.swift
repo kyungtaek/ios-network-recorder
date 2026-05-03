@@ -4,7 +4,7 @@ import Foundation
 
 /// HAR 1.2 entry object. One entry per request/response cycle.
 /// `time` MUST equal `timings.send + timings.wait + timings.receive` — upheld at construction.
-public struct HAREntry: Codable, Equatable {
+public struct HAREntry: Codable, Equatable, Sendable {
     /// When the request started (ISO 8601 with fractional seconds).
     public var startedDateTime: Date
     /// Total elapsed time in milliseconds. Equals send + wait + receive.

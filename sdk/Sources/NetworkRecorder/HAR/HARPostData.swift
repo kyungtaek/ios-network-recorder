@@ -4,7 +4,7 @@ import Foundation
 
 /// Captured request body. Exactly one of `text` or `params` should be non-nil.
 /// `mimeType` is required by HAR 1.2; defaults to "application/octet-stream".
-public struct HARPostData: Codable, Equatable {
+public struct HARPostData: Codable, Equatable, Sendable {
     /// MIME type of the posted data. Required by HAR 1.2.
     public var mimeType: String
     /// Raw body text, or "[streaming-body]" for streams, or nil if params is used.
@@ -27,7 +27,7 @@ public struct HARPostData: Codable, Equatable {
 }
 
 /// A single multipart form field.
-public struct HARParam: Codable, Equatable {
+public struct HARParam: Codable, Equatable, Sendable {
     public var name: String
     public var value: String?
     public var fileName: String?

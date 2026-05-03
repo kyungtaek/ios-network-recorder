@@ -31,8 +31,8 @@ Developer receives .har → replays traffic locally → reproduces & fixes bug
 
 ## Requirements
 
-- iOS 16+
-- Swift 5.9+
+- iOS 17+
+- Swift 6+
 - [Moya](https://github.com/Moya/Moya) 15+
 
 ---
@@ -96,6 +96,22 @@ let activityVC = UIActivityViewController(activityItems: [harURL], applicationAc
 present(activityVC, animated: true)
 ```
 
+### 4. Browse and export sessions
+
+`SessionListViewController` provides a ready-made UI for listing all persisted sessions.
+
+```swift
+let vc = SessionListViewController()                // uses SessionStore.shared
+let nav = UINavigationController(rootViewController: vc)
+present(nav, animated: true)
+```
+
+Features:
+- Sessions listed newest first; current app-launch session is marked **CURRENT**
+- Swipe left to export any session as `.har` (iOS share sheet)
+- Swipe right to delete
+- Pull to refresh
+
 ### Masking additional sensitive headers
 
 ```swift
@@ -146,6 +162,33 @@ Moya's plugin callbacks do not expose separate send/wait/receive phases. Timings
 
 ---
 
+## Session Persistence
+
+Each app launch automatically creates a new `RecordingSession` via `SessionStore`. Sessions are stored on disk and survive app restarts.
+
+```swift
+// App launch (AppDelegate / @main)
+let session = try await SessionStore.shared.startNewSession()
+let plugin  = MoyaRecorderPlugin(session: session)
+
+// On stop / entering background
+try await SessionStore.shared.persist(session)
+
+// Query sessions
+let items = try await SessionStore.shared.listSessions()
+// items[0].isCurrentSession == true
+// items[0].meta.startedAt / lastUpdatedAt / entryCount
+
+// Export any session
+let url = try await SessionStore.shared.exportSession(id: items[1].meta.id)
+```
+
+Sessions not updated for **7 days** are automatically purged on the next app launch.
+
+Storage location: `ApplicationSupport/ios-network-recorder/sessions/{uuid}.nrsession`
+
+---
+
 ## Project Structure
 
 ```
@@ -154,9 +197,11 @@ ios-network-recorder/
 │   ├── Sources/NetworkRecorder/
 │   │   ├── Plugin/             # MoyaRecorderPlugin, builders, redactor
 │   │   ├── Session/            # RecordingSession (actor), PendingStore
-│   │   ├── HAR/                # Codable HAR 1.2 models
-│   │   └── Exporter/          # HARExporter
-│   └── Tests/NetworkRecorderTests/   # 39 unit tests
+│   │   ├── HAR/                # Codable HAR 1.2 models (Sendable)
+│   │   ├── Store/              # SessionStore, SessionMeta
+│   │   ├── Exporter/           # HARExporter
+│   │   └── UI/                 # SessionListViewController (iOS)
+│   └── Tests/NetworkRecorderTests/   # 52 unit tests
 ├── SampleApp/                  # Xcode demo app (XcodeGen)
 ├── prism/                      # OpenAPI mock server for E2E tests
 └── scripts/harness.py          # Multi-agent dev harness
@@ -244,8 +289,8 @@ QA 버그 발견 → "HAR 내보내기" 탭 → AirDrop/Jira로 .har 파일 공�
 
 ## 요구사항
 
-- iOS 16+
-- Swift 5.9+
+- iOS 17+
+- Swift 6+
 - [Moya](https://github.com/Moya/Moya) 15+
 
 ---
@@ -308,6 +353,19 @@ let harURL = try await exporter.exportToFile(session: recordingSession)
 let activityVC = UIActivityViewController(activityItems: [harURL], applicationActivities: nil)
 present(activityVC, animated: true)
 ```
+
+### 4. 세션 목록 UI
+
+```swift
+let vc = SessionListViewController()   // SessionStore.shared 기본 사용
+let nav = UINavigationController(rootViewController: vc)
+present(nav, animated: true)
+```
+
+- 최신순 정렬, 현재 세션 **CURRENT** 배지 표시
+- 왼쪽 스와이프 → `.har` export (iOS 공유하기)
+- 오른쪽 스와이프 → 삭제
+- 당겨서 새로고침
 
 ### 추가 민감 헤더 마스킹
 

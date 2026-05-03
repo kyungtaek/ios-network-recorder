@@ -3,7 +3,7 @@
 import Foundation
 
 /// Top-level HAR 1.2 document. Encodes as `{ "log": HARLog }`.
-public struct HARDocument: Codable, Equatable {
+public struct HARDocument: Codable, Equatable, Sendable {
     public var log: HARLog
 
     public init(log: HARLog) {
@@ -12,7 +12,7 @@ public struct HARDocument: Codable, Equatable {
 }
 
 /// HAR 1.2 log object containing version, creator, and entries.
-public struct HARLog: Codable, Equatable {
+public struct HARLog: Codable, Equatable, Sendable {
     /// HAR specification version. Always "1.2".
     public var version: String
     public var creator: HARCreator
@@ -26,7 +26,7 @@ public struct HARLog: Codable, Equatable {
 }
 
 /// Identifies the tool that created the HAR file.
-public struct HARCreator: Codable, Equatable {
+public struct HARCreator: Codable, Equatable, Sendable {
     public var name: String
     public var version: String
 

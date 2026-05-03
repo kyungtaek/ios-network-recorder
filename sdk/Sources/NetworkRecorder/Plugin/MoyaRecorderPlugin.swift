@@ -1,7 +1,7 @@
 // MoyaRecorderPlugin.swift — Moya plugin that captures requests/responses as HAR entries.
 
 import Foundation
-import Moya
+@preconcurrency import Moya
 
 /// A Moya plugin that records all network traffic into a `RecordingSession` in HAR 1.2 format.
 ///

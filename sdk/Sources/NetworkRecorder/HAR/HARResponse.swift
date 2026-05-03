@@ -3,7 +3,7 @@
 import Foundation
 
 /// HAR 1.2 response object. status=0 is used for error stubs (request never sent).
-public struct HARResponse: Codable, Equatable {
+public struct HARResponse: Codable, Equatable, Sendable {
     /// HTTP status code. 0 indicates the request never reached the server.
     public var status: Int
     /// HTTP reason phrase, or MoyaError case name for error stubs.

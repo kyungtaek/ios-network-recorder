@@ -2,7 +2,7 @@
 // Internal namespace.
 
 import Foundation
-import Moya
+@preconcurrency import Moya
 
 /// Internal builder that constructs `HARRequest` from a `URLRequest` and `TargetType`.
 enum HARRequestBuilder {

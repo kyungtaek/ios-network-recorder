@@ -1,7 +1,7 @@
 // HARResponseBuilderTests.swift — Tests for HARResponseBuilder (T1 regression fixes).
 
 import XCTest
-import Moya
+@preconcurrency import Moya
 @testable import NetworkRecorder
 
 final class HARResponseBuilderTests: XCTestCase {

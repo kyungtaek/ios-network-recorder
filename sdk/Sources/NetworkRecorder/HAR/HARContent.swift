@@ -3,7 +3,7 @@
 import Foundation
 
 /// Response body content.
-public struct HARContent: Codable, Equatable {
+public struct HARContent: Codable, Equatable, Sendable {
     /// Size in bytes of the response body. -1 if unknown.
     public var size: Int
     /// MIME type of the response body.

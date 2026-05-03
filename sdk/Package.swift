@@ -1,11 +1,11 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 import PackageDescription
 
 let package = Package(
     name: "NetworkRecorder",
     platforms: [
-        .iOS(.v16),
-        .macOS(.v13)
+        .iOS(.v17),
+        .macOS(.v14)
     ],
     products: [
         .library(
@@ -20,12 +20,14 @@ let package = Package(
         .target(
             name: "NetworkRecorder",
             dependencies: ["Moya"],
-            path: "Sources/NetworkRecorder"
+            path: "Sources/NetworkRecorder",
+            swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
             name: "NetworkRecorderTests",
             dependencies: ["NetworkRecorder"],
-            path: "Tests/NetworkRecorderTests"
+            path: "Tests/NetworkRecorderTests",
+            swiftSettings: [.swiftLanguageMode(.v6)]
         )
     ]
 )

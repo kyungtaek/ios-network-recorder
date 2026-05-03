@@ -5,7 +5,7 @@ import Foundation
 
 /// HAR 1.2 cache object. Always serialises as an empty JSON object `{}`.
 /// The spec requires the `cache` key to be present in every entry.
-public struct HARCache: Codable, Equatable {
+public struct HARCache: Codable, Equatable, Sendable {
     public init() {}
 
     /// Empty key set forces synthesis of no keys, ensuring `{}` on encode.
